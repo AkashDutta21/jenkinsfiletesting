@@ -1,55 +1,28 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKER_IMAGE = "my-app"
-        DOCKER_TAG = "latest"
-    }
-
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/example/repo.git'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh 'npm install'
-                sh 'npm run build'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                sh 'npm test'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                script {
-                    sh "docker build -t $DOCKER_IMAGE:$DOCKER_TAG ."
+        stage('Matrix Build') {
+            matrix {
+                axes {
+                    axis {
+                        name 'NODE_VERSION'
+                        values '14', '16', '18'
+                    }
+                }
+                stages {
+                    stage('Install') {
+                        steps {
+                            sh 'npm install'
+                        }
+                    }
+                    stage('Test') {
+                        steps {
+                            sh 'npm test'
+                        }
+                    }
                 }
             }
-        }
-
-        stage('Push') {
-            steps {
-                withCredentials([string(credentialsId: 'docker-pass', variable: 'PASS')]) {
-                    sh "docker login -u user -p $PASS"
-                    sh "docker push $DOCKER_IMAGE:$DOCKER_TAG"
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'Pipeline succeeded!'
-        }
-        failure {
-            echo 'Pipeline failed!'
         }
     }
 }
